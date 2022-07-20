@@ -1,11 +1,19 @@
 import boto3
 import os
+from botocore.config import Config
 from botocore.exceptions import ClientError
 
 macie_master_account=os.environ['MACIE_MASTER_ACCOUNT']
 role_to_assume=os.environ['ROLE_TO_ASSUME']
 
 org_client=boto3.client('organizations')
+
+config=Config(
+    retries={
+        'max_attempts':10,
+        'mode':'standard'
+    }
+)
 
 def lambda_handler(event, context):
     macie_regions=boto3.Session().get_available_regions('macie2')
@@ -23,7 +31,7 @@ def lambda_handler(event, context):
                         enable_macie_master(macie_master_account_session, region)
                         enable_macie_member(macie_master_account_session, accounts, region)
             except ClientError as error:
-                print(error)
+                print(f"AWS Service Access has already been configured for Amazon Macie.")
         elif event['RequestType'] == 'Delete':
             try:
                 for region in control_tower_regions:
@@ -44,14 +52,25 @@ def lambda_handler(event, context):
                                     id=account['Id']
                                 )
                             except ClientError as error:
-                                print(error)
+                                print(f"Unable to delete {account['Id']} in {region} as a member from Amazon Macie as it's not enabled.")
                             try:
                                 member_client.disable_macie()
                                 print(f"Amazon Macie has been disabled in {region}.")
                             except ClientError as error:
-                                print(error)
+                                print(f"Unable to disable Amazon Macie in {account['Id']} in {region} as it's not enabled.")
             except ClientError as error:
                 print(error)
+    else:
+        try: 
+            org_client.enable_aws_service_access(
+                ServicePrincipal='macie.amazonaws.com'
+            )
+            for region in control_tower_regions:
+                if region in macie_regions:
+                    enable_macie_master(macie_master_account_session, region)
+                    enable_macie_member(macie_master_account_session, accounts, region)
+        except ClientError as error:
+            print(f"AWS Service Access has already been configured for Amazon Macie.")
 
 def assume_role(aws_account_id, role_to_assume):
     sts_client=boto3.client('sts')
@@ -112,13 +131,16 @@ def enable_macie_master(macie_master_account_session, region):
             )
             print(f"Delegated Administration for Amazon Macie has been enabled in {region}.")
         except ClientError as error:
-            print(error)
-    macie_admin_client.update_organization_configuration(
-        autoEnable=True
-    )
+            print(f"Delegated Administration for Amazon Macie has already been configured in {region}.")
+    try:
+        macie_admin_client.update_organization_configuration(
+            autoEnable=True
+        )
+    except ClientError as error:
+        print(f"Unable to update the Organization Configuration for Amazon Macie in {region}.")
 
 def enable_macie_member(macie_master_account_session, accounts, region):
-    macie_admin_client=macie_master_account_session.client('macie2', region_name=region)
+    macie_admin_client=macie_master_account_session.client('macie2', region_name=region, config=config)
     details=[]
     for account in accounts:
         if account['Id'] != macie_master_account:
@@ -137,7 +159,7 @@ def enable_macie_member(macie_master_account_session, accounts, region):
                 )
                 print(f"Amazon Macie has been enabled in Account ID: {account['Id']} in {region}.")
             except ClientError as error:
-                print(error)
+                print(f"Amazon Macie has already been enabled in Account ID: {account['Id']} in {region}.")
     details_batch=chunks(details, 1)
     try:
         for b in details_batch:
@@ -145,7 +167,7 @@ def enable_macie_member(macie_master_account_session, accounts, region):
                 account=b[0]
             )
     except ClientError as error:
-        print(error)
+        print(f"Unable to add Account ID: {b[0]['accountId']} in {region} as a Member to for Amazon Macie. Error: {error}.")
 
 def chunks(l, n):
     for i in range(0, len(l), n):
