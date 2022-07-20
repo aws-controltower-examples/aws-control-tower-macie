@@ -1,5 +1,6 @@
 import boto3
 import os
+import cfnresponse
 from botocore.config import Config
 from botocore.exceptions import ClientError
 
@@ -20,7 +21,7 @@ def lambda_handler(event, context):
     control_tower_regions=get_control_tower_regions()
     macie_master_account_session=assume_role(macie_master_account, role_to_assume)
     accounts=get_all_accounts()
-    if 'RequestType' in event:    
+    if 'RequestType' in event:
         if (event['RequestType'] == 'Create' or event['RequestType'] == 'Update'):
             try: 
                 org_client.enable_aws_service_access(
@@ -30,8 +31,10 @@ def lambda_handler(event, context):
                     if region in macie_regions:
                         enable_macie_master(macie_master_account_session, region)
                         enable_macie_member(macie_master_account_session, accounts, region)
+                cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
             except ClientError as error:
-                print(f"AWS Service Access has already been configured for Amazon Macie.")
+                print(error)
+                cfnresponse.send(event, context, cfnresponse.FAILED, error)  
         elif event['RequestType'] == 'Delete':
             try:
                 for region in control_tower_regions:
@@ -58,19 +61,22 @@ def lambda_handler(event, context):
                                 print(f"Amazon Macie has been disabled in {region}.")
                             except ClientError as error:
                                 print(f"Unable to disable Amazon Macie in {account['Id']} in {region} as it's not enabled.")
+                cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
             except ClientError as error:
                 print(error)
-    else:
-        try: 
-            org_client.enable_aws_service_access(
-                ServicePrincipal='macie.amazonaws.com'
-            )
-            for region in control_tower_regions:
-                if region in macie_regions:
-                    enable_macie_master(macie_master_account_session, region)
-                    enable_macie_member(macie_master_account_session, accounts, region)
-        except ClientError as error:
-            print(f"AWS Service Access has already been configured for Amazon Macie.")
+                cfnresponse.send(event, context, cfnresponse.FAILED, error)  
+        else:
+            try: 
+                org_client.enable_aws_service_access(
+                    ServicePrincipal='macie.amazonaws.com'
+                )
+                for region in control_tower_regions:
+                    if region in macie_regions:
+                        enable_macie_master(macie_master_account_session, region)
+                        enable_macie_member(macie_master_account_session, accounts, region)
+            except ClientError as error:
+                print(f"AWS Service Access has already been configured for Amazon Macie.")
+        
 
 def assume_role(aws_account_id, role_to_assume):
     sts_client=boto3.client('sts')
