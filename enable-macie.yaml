@@ -1,0 +1,141 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Creates a Lambda function to delegate Amazon Macie to a master account in an AWS Organization.  A custom resource is created to immediately invoke the lambda function upon successful deployment.
+Parameters:
+  OrganizationId:
+    Type: String
+    Description: "The Amazon Organizations ID for Control Tower."
+    MinLength: 12
+    MaxLength: 12
+    AllowedPattern: '^[o][\-][a-z0-9]{10}$'
+    ConstraintDescription: "The Organization ID must be a 12 character string starting with o- and followed by 10 Lowercase Alphanumeric Characters."
+  AccessAnalyserMasterAccountId:
+    Type: String
+    Description: "The AWS Account ID that will be configured as the Delegated Admin."
+    AllowedPattern: '^[0-9]{12}$'
+    ConstraintDescription: "This must be a 12 character string."
+    MinLength: 12
+    MaxLength: 12
+  S3SourceBucket:
+    Type: String
+    Description: "The S3 Bucket that contains the Lambda Zip File."
+  S3Key:
+    Type: String
+    Description: "The S3 Path to the Lambda Zip File"
+  RoleToAssume:
+    Type: String
+    Default: 'AWSControlTowerExecution'
+    Description: "What role should be assumed in accounts to enable GuardDuty?  The Default is AWSControlTowerExecution for a Control Tower environment."
+Resources:
+  CustomResourceEnableMacie:
+    Type: Custom::EnableMacie
+    Properties:
+      ServiceToken: !GetAtt LambdaEnableMacie.Arn
+  LambdaEnableMacie: 
+    Type: AWS::Lambda::Function
+    Properties:
+      Architectures:
+        - x86_64
+      Code: 
+        S3Bucket: !Ref S3SourceBucket
+        S3Key: !Ref S3Key
+      Description: "Lambda Function that is triggered by CloudFormation Custom Resource to Enable Amazon Macie by Default."
+      FunctionName: Lambda-Enable-Macie
+      Handler: index.lambda_handler
+      Layers:
+        - !Ref LambdaLayerCfnresponse
+      Role: !GetAtt LambdaRoleEnableMacie.Arn
+      Runtime: python3.9
+      MemorySize: 128
+      Timeout: 300
+      Environment:
+        Variables:
+            MACIE_MASTER_ACCOUNT: !Ref MacieMasterAccountId
+            ROLE_TO_ASSUME: !Ref RoleToAssume
+  LambdaLayerCfnresponse:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      CompatibleRuntimes:
+        - python3.9
+      Content:
+        S3Bucket: !Ref S3SourceBucket
+        S3Key: "lambda-layers/cfnresponse.zip"
+      Description: v1.1.2 of cfnresponse
+      LayerName: cfnresponse
+  LambdaRoleEnableMacie: 
+    Type: AWS::IAM::Role
+    Properties: 
+      Description: "Service-Role for Lambda-Enable-Macie to have the required access to execute successfully"
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - Effect: "Allow"
+            Principal: 
+              Service: 
+                - "lambda.amazonaws.com"
+            Action: 
+              - "sts:AssumeRole"
+      Path: "/"
+      RoleName: "LambdaExecutionRole-EnableMacie"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      Policies: 
+      - PolicyName: "Enable-Macie"
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+          - Effect: "Allow"
+            Action:
+              - "sts:AssumeRole"
+            Resource: !Sub "arn:aws:iam::*:role/${RoleToAssume}"
+            Condition:
+              StringEquals:
+                "aws:PrincipalOrgId": !Ref OrganizationId
+          - Effect: "Allow"
+            Action:
+              - organizations:DeregisterDelegatedAdministrator
+            Resource: !Sub "arn:aws:organizations::${AWS::AccountId}:account/${OrganizationId}/*"
+          - Effect: "Allow"
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: 
+              - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+              - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/Lambda-Enable-Macie:*"
+          - Effect: "Allow"
+            Action:
+              - organizations:RegisterDelegatedAdministrator
+              - organizations:ListAccounts
+              - organizations:ListDelegatedAdministrators
+              - organizations:ListAWSServiceAccessForOrganization
+              - organizations:DescribeOrganization
+              - organizations:DisableAWSServiceAccess
+              - organizations:EnableAWSServiceAccess
+              - cloudformation:ListStackInstances
+              - macie2:EnableOrganizationAdminAccount
+              - macie2:DisableOrganizationAdminAccount
+              - macie2:ListOrganizationAdminAccounts
+            Resource: "*"
+  LifeCycleRuleMacie: 
+    Type: AWS::Events::Rule
+    Properties: 
+      Description: "Amazon Macie LifeCycle Trigger"
+      EventPattern:
+        source: 
+          - "aws.controltower"
+        detail-type:
+          - "AWS Service Event via CloudTrail"
+        detail:
+          eventName:
+            - "CreateManagedAccount"
+      State: "ENABLED"
+      Targets: 
+        - Arn: !GetAtt LambdaEnableMacie.Arn
+          Id: "NewAccount"
+  PermissionForCTEventToInvokeLambda: 
+    Type: AWS::Lambda::Permission
+    Properties: 
+      FunctionName: !GetAtt LambdaEnableMacie.Arn
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt LifeCycleRuleMacie.Arn

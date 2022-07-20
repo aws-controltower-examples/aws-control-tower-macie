@@ -1,10 +1,8 @@
 import boto3
 import os
-import json
 from botocore.exceptions import ClientError
 
 macie_master_account=os.environ['MACIE_MASTER_ACCOUNT']
-log_archive_account=os.environ['LOG_ARCHIVE_ACCOUNT']
 role_to_assume=os.environ['ROLE_TO_ASSUME']
 
 org_client=boto3.client('organizations')
