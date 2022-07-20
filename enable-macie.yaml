@@ -46,7 +46,7 @@ Resources:
       Role: !GetAtt LambdaRoleEnableMacie.Arn
       Runtime: python3.9
       MemorySize: 128
-      Timeout: 300
+      Timeout: 600
       Environment:
         Variables:
             MACIE_MASTER_ACCOUNT: !Ref MacieMasterAccountId
