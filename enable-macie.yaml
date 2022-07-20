@@ -8,7 +8,7 @@ Parameters:
     MaxLength: 12
     AllowedPattern: '^[o][\-][a-z0-9]{10}$'
     ConstraintDescription: "The Organization ID must be a 12 character string starting with o- and followed by 10 Lowercase Alphanumeric Characters."
-  AccessAnalyserMasterAccountId:
+  MacieMasterAccountId:
     Type: String
     Description: "The AWS Account ID that will be configured as the Delegated Admin."
     AllowedPattern: '^[0-9]{12}$'
