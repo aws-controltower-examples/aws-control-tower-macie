@@ -30,12 +30,12 @@ Resources:
     Type: Custom::EnableMacie
     Properties:
       ServiceToken: !GetAtt LambdaEnableMacie.Arn
-  LambdaEnableMacie: 
+  LambdaEnableMacie:
     Type: AWS::Lambda::Function
     Properties:
       Architectures:
         - x86_64
-      Code: 
+      Code:
         S3Bucket: !Ref S3SourceBucket
         S3Key: !Ref S3Key
       Description: "Lambda Function that is triggered by CloudFormation Custom Resource to Enable Amazon Macie by Default."
@@ -61,24 +61,24 @@ Resources:
         S3Key: "lambda-layers/cfnresponse.zip"
       Description: v1.1.2 of cfnresponse
       LayerName: cfnresponse
-  LambdaRoleEnableMacie: 
+  LambdaRoleEnableMacie:
     Type: AWS::IAM::Role
-    Properties: 
+    Properties:
       Description: "Service-Role for Lambda-Enable-Macie to have the required access to execute successfully"
-      AssumeRolePolicyDocument: 
+      AssumeRolePolicyDocument:
         Version: "2012-10-17"
-        Statement: 
+        Statement:
           - Effect: "Allow"
-            Principal: 
-              Service: 
+            Principal:
+              Service:
                 - "lambda.amazonaws.com"
-            Action: 
+            Action:
               - "sts:AssumeRole"
       Path: "/"
       RoleName: "LambdaExecutionRole-EnableMacie"
       ManagedPolicyArns:
         - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-      Policies: 
+      Policies:
       - PolicyName: "Enable-Macie"
         PolicyDocument:
           Version: "2012-10-17"
@@ -99,7 +99,7 @@ Resources:
               - logs:CreateLogGroup
               - logs:CreateLogStream
               - logs:PutLogEvents
-            Resource: 
+            Resource:
               - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
               - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/Lambda-Enable-Macie:*"
           - Effect: "Allow"
@@ -116,12 +116,12 @@ Resources:
               - macie2:DisableOrganizationAdminAccount
               - macie2:ListOrganizationAdminAccounts
             Resource: "*"
-  LifeCycleRuleMacie: 
+  LifeCycleRuleMacie:
     Type: AWS::Events::Rule
-    Properties: 
+    Properties:
       Description: "Amazon Macie LifeCycle Trigger"
       EventPattern:
-        source: 
+        source:
           - "aws.controltower"
         detail-type:
           - "AWS Service Event via CloudTrail"
@@ -129,12 +129,12 @@ Resources:
           eventName:
             - "CreateManagedAccount"
       State: "ENABLED"
-      Targets: 
+      Targets:
         - Arn: !GetAtt LambdaEnableMacie.Arn
           Id: "NewAccount"
-  PermissionForCTEventToInvokeLambda: 
+  PermissionForCTEventToInvokeLambda:
     Type: AWS::Lambda::Permission
-    Properties: 
+    Properties:
       FunctionName: !GetAtt LambdaEnableMacie.Arn
       Action: "lambda:InvokeFunction"
       Principal: "events.amazonaws.com"
