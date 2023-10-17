@@ -23,7 +23,7 @@ Parameters:
     Description: "The S3 Path to the Lambda Zip File"
   CfnS3Key:
     Type: String
-    Description: "The S3 Path to the Lambda Zip File"
+    Description: "The S3 Path Cfnresponse zip file"
   RoleToAssume:
     Type: String
     Default: 'AWSControlTowerExecution'
