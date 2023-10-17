@@ -57,6 +57,7 @@ Before you proceed, ensure that you have the following prerequisites in place:
 | OrganizationId | AWS Organizations ID for the Control Tower. | String | n/a |
 | S3SourceBucket | The S3 bucket containing the aws-macie Lambda deployment package. | String | `""` |
 | S3Key| he S3 object key for the aws-macie Lambda deployment package. | String | `macie.zip` |
+| CfnS3Key| The S3 Path Cfnresponse zip file | String | `cfnresponse.zip` |
 | RoleToAssume | The IAM role to be assumed in child accounts to enable aws-macie. | String | `AWSControlTowerExecution` |
 
 ## Deployment
