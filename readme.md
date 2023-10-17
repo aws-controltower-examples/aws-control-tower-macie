@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/License-APACHE-blue.svg" alt="Licence">
 </a>
 <a href="https://github.com/aws-controltower-examples/aws-control-tower-securityhub-enabler/actions/workflows/cf-lint.yml">
-  <img src="https://github.com/aws-controltower-examples/aws-control-tower-securityhub-enabler/actions/workflows/cf-lint.yml/badge.svg" alt="tfsec">
+  <img src="https://github.com/aws-controltower-examples/aws-control-tower-aws-macie-enabler/actions/workflows/cf-lint.yml/badge.svg" alt="tfsec">
 </a>
 
 
