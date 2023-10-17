@@ -58,7 +58,7 @@ Resources:
         - python3.9
       Content:
         S3Bucket: !Ref S3SourceBucket
-        S3Key: "cfnresponse.zip"
+        S3Key: "macie/cfnresponse.zip"
       Description: v1.1.2 of cfnresponse
       LayerName: cfnresponse
   LambdaRoleEnableMacie:
