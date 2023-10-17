@@ -1,74 +1,106 @@
-# Amazon Macie
+<p align="center"> <img src="https://avatars.githubusercontent.com/u/145441379?s=200&v=4" width="130" height="130"></p>
 
-This CloudFormation Template configures a Lambda Function that leverages parameters parsed into it via CloudFormation Parameter through the use of Environment Variables.  Specifically the Lambda Function does a number of things:
-* Determines whether a Delegated Administrative Account exists for Amazon Macie.  If it doesn't then it enables Delegated Administration to the AWS Account ID that is parsed in.
-* For every Governed Region within AWS Control Tower and every Active AWS Account in the Organization, it then assumes the AWSControlTowerExecution Role and Enables Amazon Macie
-* For every Governed Region within AWS Control Tower it then assumes the AWSControlTowerExecution Role into the Delegated Adminstration Account and Adds all Active AWS Accounts within the Organization as Members.
-* If the CloudFormation Stack is deleted, it disables Amazon Macie in every AWS Account and then deregisters the Delegated Administration.
 
-## Architecture Overview
+<h1 align="center">
+    Control Tower aws-macie
+</h1>
 
-![alt](./diagrams/amazon-macie.png)
+<p align="center" style="font-size: 1.2rem;"> 
+    CloudFormation Template for aws-macie.
+</p>
 
-## Pre-Requisites and Installation
+<p align="center">
+<a href="LICENSE">
+  <img src="https://img.shields.io/badge/License-APACHE-blue.svg" alt="Licence">
+</a>
+<a href="https://github.com/aws-controltower-examples/aws-control-tower-aws-macie-enabler/actions/workflows/cf-lint.yml">
+  <img src="https://github.com/aws-controltower-examples/aws-control-tower-aws-macie-enabler/actions/workflows/cf-lint.yml/badge.svg" alt="tfsec">
+</a>
 
-### Pre-Requisites
 
-There is an overarching assumption that you already have [Customisation for Control Tower](https://aws.amazon.com/solutions/implementations/customizations-for-aws-control-tower/) deployed within your Control Tower Environment.
+</p>
+<p align="center">
 
-1.  Clone the GitHub Repo to your local device.
-2.  Create an S3 Bucket where you'll then upload the `macie.zip` file to. Make a note of the bucket name and the prefix to the `macie.zip`. Note: The region where you create the bucket will need to be in the region of the Control Tower home region since that is where the Lambda Function will be created.
-3.  Create a prefix within the S3 Bucket named `lambda-layers` and upload `cfnresponse.zip`to that prefix.
+<a href='https://facebook.com/sharer/sharer.php?u=https://github.com/aws-controltower-examples/aws-control-tower-aws-macie-enabler'>
+  <img title="Share on Facebook" src="https://user-images.githubusercontent.com/50652676/62817743-4f64cb80-bb59-11e9-90c7-b057252ded50.png" />
+</a>
+<a href='https://www.linkedin.com/shareArticle?mini=true&title=AWS+Control+Tower+aws-macie+Enabler&url=https://github.com/aws-controltower-examples/aws-control-tower-aws-macie-enabler'>
+  <img title="Share on LinkedIn" src="https://user-images.githubusercontent.com/50652676/62817742-4e339e80-bb59-11e9-87b9-a1f68cae1049.png" />
+</a>
+<a href='https://twitter.com/intent/tweet/?text=AWS+Control+Tower+aws-macie+Enabler&url=https://github.com/aws-controltower-examples/aws-control-tower-aws-macie-enabler'>
+  <img title="Share on Twitter" src="https://user-images.githubusercontent.com/50652676/62817740-4c69db00-bb59-11e9-8a79-3580fbbf6d5c.png" />
+</a>
 
-### Installation
+</p>
+<hr>
 
-1.  Copy the CloudFormation Template `enable-macie.yaml` should be added to the `/templates` folder for use with Customisations for Control Tower.
-2.  Copy the CloudFormation Parameters `enable-macie.json` should be added to `/parameters` folder for use with Customisations for Control Tower.
-3.  Update the CloudFormation Parameters `enable-macie.json` with the required details:
-    * **OrganizationId:** This is used to implement conditions within the IAM Policy used for the Lambda Execution Role. This can be obtained from with AWS Organisations.
-    * **MacieMasterAccountId:** This is the AWS Account ID of the Account that you wish to configure as the delegated admin for Access Analyser.  It's recommended to use the Security Account (formerly called Audit Account) configured by Control Tower.
-    * **S3SourceBucket:** This is the S3 Bucket where the Lambda Function source files are located.
-    * **S3Key:** This is the prefix within the S3 Bucket where the Lambda Function source files are located.
-    * **RoleToAssume:** This is used within the Lambda Function to AssumeRole into other AWS Accounts in order to Create/Configure/Delete different AWS Services such as Security Hub.  This is preconfigured with a default value of `AWSControlTowerExecution` since this IAM Role is created in all AWS Accounts as part the AWS Control Tower setup.
 
-    The above values should be configured within the `enable-macie.json`:
+We eat, drink, sleep and most importantly love **DevOps**. We are working towards strategies for standardizing architecture while ensuring security for the infrastructure. We are strong believer of the philosophy <b>Bigger problems are always solved by breaking them into smaller manageable problems</b>. Resonating with microservices architecture, it is considered best-practice to run database, cluster, storage in smaller <b>connected yet manageable pieces</b> within the infrastructure.
 
-    ```json
-    [
-        {
-            "ParameterKey": "OrganizationId",
-            "ParameterValue": ""
-        },
-        {
-            "ParameterKey": "MacieMasterAccountId",
-            "ParameterValue": ""
-        },
-        {
-            "ParameterKey": "S3SourceBucket",
-            "ParameterValue": ""
-        },
-        {
-            "ParameterKey": "S3Key",
-            "ParameterValue": ""
-        },
-        {
-            "ParameterKey": "RoleToAssume",
-            "ParameterValue": "AWSControlTowerExecution"
-        }
-    ]
-    ```
+The AWS Control Tower aws-macie is an AWS CloudFormation template designed to simplify the process of enabling and configuring AWS aws-macie in the security account of an AWS Control Tower environment. This template creates essential AWS resources, such as IAM roles, Lambda functions, and SNS topics, to automate the aws-macie setup based on your specified parameters.
 
-4.  Update the `manifest.yaml` and configure the `deployment_targets` and `regions` accordingly based on your needs. The deployment target should be the AWS Control Tower Management Account since the Lambda Function that is invoked uses API Calls that are run are only available to the Master Account whilst the region should be configured to the Control Tower home region.
+## Prerequisites
 
-    ```yaml
-    - name: Enable-Amazon-Macie
-      description: "CloudFormation Template to Enable Amazon Macie for the Organization"
-      resource_file: templates/enable-macie.yaml
-      parameter_file: parameters/enable-macie.json
-      deploy_method: stack_set
-      deployment_targets:
-        accounts:
-          - # Either the 12-digit Account ID or the Logical Name for the Control Tower Management Account
-      regions:
-        - # AWS Region that is configured as the Home Region within Control Tower
-    ```
+Before you proceed, ensure that you have the following prerequisites in place:
+
+1. **AWS Control Tower Environment**: You must have an AWS Control Tower environment set up.
+
+2. **AWS Access**: You should have AWS CLI or AWS Management Console access with sufficient permissions to deploy CloudFormation templates.
+
+3. **Security Account**: Know the AWS account ID of your Security Account.
+
+## Parameters
+
+| Name | Description | Type | Default |
+|------|-------------|------| ------- |
+| MacieMasterAccountId | The AWS account ID of the Security(Audit) Account. | String | `n/a` |
+| OrganizationId | AWS Organizations ID for the Control Tower. | String | n/a |
+| S3SourceBucket | The S3 bucket containing the aws-macie Lambda deployment package. | String | `""` |
+| S3Key| he S3 object key for the aws-macie Lambda deployment package. | String | `macie.zip` |
+| RoleToAssume | The IAM role to be assumed in child accounts to enable aws-macie. | String | `AWSControlTowerExecution` |
+
+## Deployment
+
+Follow these steps to deploy the AWS Control Tower aws-macie template:
+
+1. Sign in to the AWS Management Console or use the AWS CLI.
+
+2. Navigate to the AWS CloudFormation service.
+
+3. Create a new CloudFormation stack.
+
+4. Upload this template or provide the S3 URL where it is located.
+
+5. Fill in the required parameters as described above.
+
+6. Review and confirm the stack creation.
+
+## Functionality
+
+The CloudFormation template creates the following AWS resources:
+
+- **IAM Role:** An IAM role for the aws-macie Lambda function with necessary permissions.
+
+- **Lambda Function:** The aws-macie Lambda function, responsible for configuring aws-macie.
+
+- **CloudWatch Event Rules:** Scheduled rules to trigger the Lambda function periodically and when AWS accounts are created or managed via AWS
+
+## Feedback 
+If you come accross a bug or have any feedback, please log it in our [issue tracker](https://github.com/aws-controltower-examples/aws-control-tower-aws-macie-enabler/issues), or feel free to drop us an email at [hello@clouddrove.com](mailto:hello@clouddrove.com).
+
+If you have found it worth your time, go ahead and give us a ★ on [our GitHub](https://github.com/clouddrove/terraform-aws-vpc-peering)!
+
+## About us
+
+At [CloudDrove][website], we offer expert guidance, implementation support and services to help organisations accelerate their journey to the cloud. Our services include docker and container orchestration, cloud migration and adoption, infrastructure automation, application modernisation and remediation, and performance engineering.
+
+<p align="center">We are <b> The Cloud Experts!</b></p>
+<hr />
+<p align="center">We ❤️  <a href="https://github.com/clouddrove">Open Source</a> and you can check out <a href="https://github.com/clouddrove">our other modules</a> to get help with your new Cloud ideas.</p>
+
+  [website]: https://clouddrove.com
+  [github]: https://github.com/clouddrove
+  [linkedin]: https://cpco.io/linkedin
+  [twitter]: https://twitter.com/clouddrove/
+  [email]: https://clouddrove.com/contact-us.html
+  [terraform_modules]: https://github.com/clouddrove?utf8=%E2%9C%93&q=terraform-&type=&language=
