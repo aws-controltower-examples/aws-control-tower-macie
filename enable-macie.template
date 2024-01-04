@@ -21,6 +21,9 @@ Parameters:
   S3Key:
     Type: String
     Description: "The S3 Path to the Lambda Zip File"
+  CfnS3Key:
+    Type: String
+    Description: "The S3 Path Cfnresponse zip file"
   RoleToAssume:
     Type: String
     Default: 'AWSControlTowerExecution'
@@ -58,7 +61,7 @@ Resources:
         - python3.9
       Content:
         S3Bucket: !Ref S3SourceBucket
-        S3Key: "lambda-layers/cfnresponse.zip"
+        S3Key: !Ref CfnS3Key
       Description: v1.1.2 of cfnresponse
       LayerName: cfnresponse
   LambdaRoleEnableMacie:
